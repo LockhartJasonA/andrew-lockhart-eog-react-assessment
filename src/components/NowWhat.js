@@ -1,4 +1,6 @@
-import React from "react";
+import React, { Component } from "react";
+import { connect } from "react-redux";
+
 import Card from "@material-ui/core/Card";
 import CardHeaderRaw from "@material-ui/core/CardHeader";
 import CardContent from "@material-ui/core/CardContent";
@@ -7,6 +9,14 @@ import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
 import { withStyles } from "@material-ui/core/styles";
 import AvatarRaw from "@material-ui/core/Avatar";
+import Button from '@material-ui/core/Button';
+
+import * as actions from "../store/actions";
+
+import DashboardVisual from './Visualizations/Dashboard'
+import ChartVisual from './Visualizations/Chart'
+import MapVisual from './Visualizations/Map'
+import DefaultSelection from './DefaultSelection'
 
 const cardStyles = theme => ({
   root: {
@@ -34,33 +44,106 @@ const styles = {
   }
 };
 
-const NowWhat = props => {
-  const { classes } = props;
-  return (
-    <Card className={classes.card}>
-      <CardHeader title="OK, andrew-lockhart, you're all setup. Now What?" />
-      <CardContent>
-        <List>
-          <ListItem>
-            <Avatar>1</Avatar>
-            <ListItemText primary="Connect to the Drone API" />
-          </ListItem>
-          <ListItem>
-            <Avatar>2</Avatar>
-            <ListItemText primary="Create your Visualization" />
-          </ListItem>
-          <ListItem>
-            <Avatar>3</Avatar>
-            <ListItemText primary="Poll the API" />
-          </ListItem>
-          <ListItem>
-            <Avatar>4</Avatar>
-            <ListItemText primary="Submit Your App" />
-          </ListItem>
-        </List>
-      </CardContent>
-    </Card>
-  );
+class NowWhat extends Component {
+
+  state = {
+    componentInView: "",
+  };
+
+  componentDidMount() {
+      this.props.fetchDrone();
+
+      this.fetchDroneTimer = setInterval(() => {
+          this.props.fetchDrone();
+      }, 4000)
+  }
+
+  componentWillUnmount() {
+      clearTimeout(this.fetchDroneTimer)
+  }
+
+  handleClickDashboard = () => this.setState({componentInView: 'dashboard'});
+  handleClickMap = () => this.setState({componentInView: 'map'});
+  handleClickChart = () => this.setState({componentInView: 'chart'});
+
+  renderComponentInView() {
+    switch(this.state.componentInView) {
+        case 'dashboard':
+            return <DashboardVisual {...this.props} />;
+        case 'map':
+            return <MapVisual {...this.props} />;
+        case 'chart':
+            return <ChartVisual {...this.props} />;
+        default:
+            return <DefaultSelection/>;
+    }
+  }
+
+  render() {
+    const { classes } = this.props;
+      return (
+          <div>
+            <Card className={classes.card}>
+              <CardHeader title="Data Visual Stuffs"/>
+              <CardContent>
+                <List>
+                  <ListItem>
+                    <Avatar>1</Avatar>
+                    <ListItemText primary="Dashboard"/>
+                      <Button variant="contained" color="primary" onClick={this.handleClickDashboard}>
+                        View Dashboard
+                      </Button>
+                  </ListItem>
+                  <ListItem>
+                    <Avatar>2</Avatar>
+                    <ListItemText primary="Map"/>
+                      <Button variant="contained" color="primary" onClick={this.handleClickMap}>
+                        View Map
+                      </Button>
+                  </ListItem>
+                  <ListItem>
+                    <Avatar>3</Avatar>
+                    <ListItemText primary="Chart"/>
+                      <Button variant="contained" color="primary" onClick={this.handleClickChart}>
+                        View Chart
+                      </Button>
+                  </ListItem>
+                </List>
+              </CardContent>
+            </Card>
+            <div>
+              {this.renderComponentInView()}
+            </div>
+          </div>
+      );
+  }
 };
 
-export default withStyles(styles)(NowWhat);
+const mapState = (state, ownProps) => {
+    const {
+        loading,
+        latitude,
+        longitude,
+        temperature,
+        last_received,
+        allTemperatures,
+        allTimestamps
+    } = state.drone;
+    return {
+        loading,
+        latitude,
+        longitude,
+        temperature,
+        last_received,
+        allTemperatures,
+        allTimestamps
+    };
+};
+
+const mapDispatch = dispatch => ({
+    fetchDrone: () =>
+        dispatch({
+            type: actions.FETCH_DRONE,
+        })
+});
+export default connect(mapState, mapDispatch)(withStyles(styles)(NowWhat));
